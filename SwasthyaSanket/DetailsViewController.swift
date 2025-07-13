@@ -18,6 +18,7 @@ final class DetailsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.hidesBackButton = true
+        typewriter(text: "Enter Details", on: enterDetails)
 
         // ⬇️  Dismiss keyboard on outside tap
         let tap = UITapGestureRecognizer(target: self, action: #selector(endEditing))
@@ -96,15 +97,28 @@ final class DetailsViewController: UIViewController {
 
     // MARK: - Typewriter
     private func typewriter(text: String, on label: UILabel, completion: (() -> Void)? = nil) {
-        let chars = Array(text)
+        label.text = ""
         label.alpha = 0.1
+
+        let chars = Array(text)
+        let totalChars = chars.count
+
         for i in chars.indices {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.08) {
                 label.text? += String(chars[i])
-                if i == chars.count - 1 { completion?() }
+                
+                // Update alpha proportionally as text grows
+                let progress = CGFloat(i + 1) / CGFloat(totalChars)
+                label.alpha = 0.1 + 0.9 * progress  // fade from 0.1 → 1.0
+                
+                if i == totalChars - 1 {
+                    completion?()
+                }
             }
         }
     }
+
+
 
     private func showError(_ message: String) {
         errorCode.text     = message

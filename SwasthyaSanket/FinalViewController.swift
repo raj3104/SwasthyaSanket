@@ -2,6 +2,60 @@ import UIKit
 import FirebaseFirestore
 
 final class FinalViewController: UIViewController {
+    
+    
+    @IBOutlet weak var cityName: UILabel!
+    
+    
+    @IBOutlet weak var doctorNames: UILabel!
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    @IBOutlet weak var kidneyDiseaseText: UILabel!
+    @IBOutlet weak var copdText: UILabel!
+    @IBOutlet weak var heartDiseaseText: UILabel!
+    
+    
+    @IBOutlet weak var hypertensionText: UILabel!
+    
+    
+    @IBOutlet weak var hypertensionProgress: UIProgressView!
+    
+    
+    @IBOutlet weak var diabetesText: UILabel!
+    
+    
+    @IBOutlet weak var diabetesProgress: UIProgressView!
+    
+    
+    
+    @IBOutlet weak var heartDiseaseProgress: UIProgressView!
+    
+    
+    
+    @IBOutlet weak var copdProgress: UIProgressView!
+    
+    
+    @IBOutlet weak var kidneyDiseaseProgress: UIProgressView!
+    
+    
+    
+    
+    
+    
+    
+    
+    
     private var dietListener: ListenerRegistration?
     private var task1Listener: ListenerRegistration?
     private var task2Listener: ListenerRegistration?
@@ -31,18 +85,23 @@ final class FinalViewController: UIViewController {
         listenToBasicFields()
         listenToDietPlan()
         listenToWorkTasks()
+        listenToDiseaseProbs()
+        fetchDoctorRecommendations()
+
     }
 
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureStaticFields()          // sets initial values once
-        listenToBasicFields()            // ← NEW live updates
+        configureStaticFields()
+        listenToBasicFields()
         listenToDietPlan()
+        fetchDoctorRecommendations()
         listenToWorkTasks()
+        listenToDiseaseProbs()  // ← Make sure this is added
         print("▶️ FinalVC loaded with userDocID =", userDocID ?? "nil")
-
     }
+
 
     deinit {
         basicListener?.remove()
@@ -184,6 +243,114 @@ final class FinalViewController: UIViewController {
             }
 
     }
+    
+    
+    private func listenToDiseaseProbs() {
+        let db = Firestore.firestore()
+        let docRef = db.collection("workerDetails").document(userDocID)
+
+        docRef.addSnapshotListener { [weak self] snapshot, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard let data = snapshot?.data(), error == nil else {
+                    print("❌ Error fetching document:", error?.localizedDescription ?? "Unknown")
+                    return
+                }
+
+                guard let diseaseMap = data["disease_probs"] as? [String: Any] else {
+                    print("⚠️ disease_probs map not found")
+                    return
+                }
+
+                func updateProgressBar(_ progressBar: UIProgressView, value: Float) {
+                    progressBar.setProgress(value, animated: true)
+                    let percent = value * 100
+
+                    switch percent {
+                    case 0..<35:
+                        progressBar.progressTintColor = .systemGreen
+                    case 35..<70:
+                        progressBar.progressTintColor = .systemYellow
+                    default:
+                        progressBar.progressTintColor = .systemRed
+                    }
+                }
+
+                if let val = diseaseMap["COPD"] as? NSNumber {
+                    let floatVal = val.floatValue
+                    updateProgressBar(self.copdProgress, value: floatVal)
+                    self.copdText.text = "COPD: \(Int(floatVal * 100))%"
+                }
+                if let val = diseaseMap["Diabetes"] as? NSNumber {
+                    let floatVal = val.floatValue
+                    updateProgressBar(self.diabetesProgress, value: floatVal)
+                    self.diabetesText.text = "Diabetes: \(Int(floatVal * 100))%"
+                }
+                if let val = diseaseMap["Heart Disease"] as? NSNumber {
+                    let floatVal = val.floatValue
+                    updateProgressBar(self.heartDiseaseProgress, value: floatVal)
+                    self.heartDiseaseText.text = "Heart Disease: \(Int(floatVal * 100))%"
+                }
+                if let val = diseaseMap["Hypertension"] as? NSNumber {
+                    let floatVal = val.floatValue
+                    updateProgressBar(self.hypertensionProgress, value: floatVal)
+                    self.hypertensionText.text = "Hypertension: \(Int(floatVal * 100))%"
+                }
+                if let val = diseaseMap["Kidney Disease"] as? NSNumber {
+                    let floatVal = val.floatValue
+                    updateProgressBar(self.kidneyDiseaseProgress, value: floatVal)
+                    self.kidneyDiseaseText.text = "Kidney Disease: \(Int(floatVal * 100))%"
+                }
+            }
+        }
+    }
+    
+    
+    
+    private func fetchDoctorRecommendations() {
+        let db = Firestore.firestore()
+        let docRef = db.collection("workerDetails")
+                       .document(userDocID)
+                       .collection("doctor")
+                       .document("recommendation")
+
+        docRef.addSnapshotListener { [weak self] snapshot, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard error == nil, let data = snapshot?.data() else {
+                    self.cityName.text = "—"
+                    self.doctorNames.text = "—"
+                    print("❌ Doctor fetch error:", error?.localizedDescription ?? "Unknown")
+                    return
+                }
+
+                let city = data["city"] as? String ?? "—"
+                var rawInfo = data["info"] as? String ?? ""
+
+                self.cityName.text = city
+                self.doctorNames.numberOfLines = 0
+
+                // 🔧 Clean and reformat the info string
+                rawInfo = rawInfo.replacingOccurrences(of: #"\\\."#, with: ".", options: .regularExpression)
+
+                // Split the info into parts at "1. ", "2. ", etc.
+                let matches = rawInfo.components(separatedBy: #"(?=\d+\.\s)"#)
+                                     .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+                // Join with newlines
+                let formattedInfo = matches.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+
+                self.doctorNames.text = formattedInfo
+            }
+        }
+    }
+
+
+
+
+
+
+
 
 
 }

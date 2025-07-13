@@ -1,6 +1,20 @@
 import UIKit
 
 final class ViewController: UIViewController {
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     // MARK: - Outlets
     @IBOutlet private weak var animateLabel: UILabel!   // Connect to the label you want animated
